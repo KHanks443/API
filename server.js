@@ -1,68 +1,88 @@
-import express from "express";
-import db from "./db.js";
+const express = require("express");
+const db = require("./db");
 
 const app = express();
+const PORT = 3000;
+
 app.use(express.json());
 
-// GET all items
 app.get("/items", (req, res) => {
     db.all("SELECT * FROM items", [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
     });
 });
 
-// GET one item
 app.get("/items/:id", (req, res) => {
-    db.get("SELECT * FROM items WHERE id = ?", [req.params.id], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!row) return res.status(404).json({ message: "Item not found" });
-        res.json(row);
+    const id = req.params.id;
+
+    db.get("SELECT * FROM items WHERE id = ?", [id], (err, row) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else if (!row) {
+            res.status(404).json({ message: "Item not found" });
+        } else {
+            res.json(row);
+        }
     });
 });
 
-// CREATE an item
 app.post("/items", (req, res) => {
-    const { name, qty } = req.body;
+    const { name, quantity } = req.body;
+
     db.run(
-        "INSERT INTO items (name, qty) VALUES (?, ?)",
-        [name, qty],
+        "INSERT INTO items (name, quantity) VALUES (?, ?)",
+        [name, quantity],
         function (err) {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json({ id: this.lastID, name, qty });
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.json({
+                    id: this.lastID,
+                    name,
+                    quantity
+                });
+            }
         }
     );
 });
 
-// UPDATE an item
 app.put("/items/:id", (req, res) => {
-    const { name, qty } = req.body;
+    const id = req.params.id;
+    const { name, quantity } = req.body;
+
     db.run(
-        "UPDATE items SET name = ?, qty = ? WHERE id = ?",
-        [name, qty, req.params.id],
+        "UPDATE items SET name = ?, quantity = ? WHERE id = ?",
+        [name, quantity, id],
         function (err) {
-            if (err) return res.status(500).json({ error: err.message });
-            if (this.changes === 0)
-                return res.status(404).json({ message: "Item not found" });
-            res.json({ id: req.params.id, name, qty });
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else if (this.changes === 0) {
+                res.status(404).json({ message: "Item not found" });
+            } else {
+                res.json({ message: "Item updated successfully" });
+            }
         }
     );
 });
 
-// DELETE an item
 app.delete("/items/:id", (req, res) => {
-    db.run(
-        "DELETE FROM items WHERE id = ?",
-        [req.params.id],
-        function (err) {
-            if (err) return res.status(500).json({ error: err.message });
-            if (this.changes === 0)
-                return res.status(404).json({ message: "Item not found" });
-            res.json({ message: "Item deleted" });
+    const id = req.params.id;
+
+    db.run("DELETE FROM items WHERE id = ?", [id], function (err) {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else if (this.changes === 0) {
+            res.status(404).json({ message: "Item not found" });
+        } else {
+            res.json({ message: "Item deleted successfully" });
         }
-    );
+    });
 });
 
-app.listen(3000, () => {
-    console.log("API running on http://localhost:3000");
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
 });
